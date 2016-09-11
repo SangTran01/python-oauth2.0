@@ -14,6 +14,8 @@
 
 <!-- GOOGLE+ SIGNIN -->
 
+
+<!-- STEP1 FLOW. LOGIN and consent REQUEST TOKEN -->
 <div id="signInButton">
   <span class="g-signin"
     data-scope="openid email"
@@ -29,18 +31,20 @@
 
 <script>
 function signInCallback(authResult) {
-  // SENT FROM GOOGLE a one-time authorization code
+  // STEP2. FLOW SENT FROM GOOGLE SERVERS a one-time authorization code
 	if (authResult['code']) {
 	    // Hide the sign-in button now that the user is authorized
 	    $('#signinButton').attr('style', 'display: none');
 	    // Send the one-time-use code to the server, if the server responds, write a 'login successful' message to the web page and then redirect back to the main restaurants page
 	    $.ajax({
 	      type: 'POST',
+        // GOING TO gconnect path runs gconnect method
 	      url: '/gconnect?state={{STATE}}',
 	      processData: false,
-	      // SENDING one-time authorization code as data variable to SERVER 
+	      // STEP3. FLOW SENDING one-time authorization code as data variable to SERVER to get TOKEN
         data: authResult['code'],
 	      contentType: 'application/octet-stream; charset=utf-8',
+        // STEP5. TOKEN RESPONSE
 	      success: function(result) {
 	        // Handle or verify the server response if necessary.
 	        if (result) {
@@ -59,7 +63,6 @@ function signInCallback(authResult) {
 	  }); 
 
 	} 
-  console.log(authResult);
 }
 </script>
 

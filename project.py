@@ -13,6 +13,7 @@ import httplib2
 import json
 from flask import make_response
 import requests
+from datetime import date, datetime
 
 app = Flask(__name__)
 
@@ -33,6 +34,7 @@ session = DBSession()
 # Create anti-forgery state token
 @app.route('/login')
 def showLogin():
+    print "STARTING LOGIN"
     state = ''.join(random.choice(string.ascii_uppercase + string.digits)
                     for x in xrange(32))
     login_session['state'] = state
@@ -47,13 +49,14 @@ def gconnect():
         response = make_response(json.dumps('Invalid state parameter.'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
-    # Obtain authorization code
+    # STEP3.1 FLOW Obtain authorization code
     code = request.data
 
     try:
         # Upgrade the authorization code into a credentials object
         oauth_flow = flow_from_clientsecrets('client_secrets.json', scope='')
         oauth_flow.redirect_uri = 'postmessage'
+        # STEP 3.2 FLOW exchange code for token
         credentials = oauth_flow.step2_exchange(code)
     except FlowExchangeError:
         response = make_response(
@@ -97,8 +100,11 @@ def gconnect():
         response.headers['Content-Type'] = 'application/json'
         return response
 
+
     # Store the access token in the session for later use.
-    login_session['credentials'] = credentials
+    # login_session['credentials'] = credentials
+    # login_session['gplus_id'] = gplus_id
+    login_session['access_token'] = credentials.access_token
     login_session['gplus_id'] = gplus_id
 
     # Get user info
@@ -111,6 +117,14 @@ def gconnect():
     login_session['username'] = data['name']
     login_session['picture'] = data['picture']
     login_session['email'] = data['email']
+    # Add provider to Login session
+    login_session['provider'] = 'google'
+
+    # # SEE if user exists, if not make a new one
+    # user_id = getUserID(data['email'])
+    # if not user_id:
+    #   user_id = createUser(login_session)
+    # login_session['user_id'] = user_id
 
     output = ''
     output += '<h1>Welcome, '
@@ -122,6 +136,56 @@ def gconnect():
     flash("you are now logged in as %s" % login_session['username'])
     print "done!"
     return output
+
+
+
+# Handle Google logout
+# DISCONNECT - Revoke a current user's token and reset their login_session.
+@app.route('/gdisconnect')
+def gdisconnect():
+  # Only disconnect a connected user.
+  credentials = login_session.get('credentials')
+  if credentials is None:
+    response = make_response(
+        json.dumps('Current user not connected.'), 401)
+    response.headers['Content-Type'] = 'application/json'
+    return response
+  access_token = credentials.access_token
+  url = 'https://accounts.google.com/o/oauth2/revoke?token=%s' % access_token
+  h = httplib2.Http()
+  result = h.request(url, 'GET')[0]
+  if result['status'] != '200':
+    # For whatever reason, the given token was invalid.
+    response = make_response(
+        json.dumps('Failed to revoke token for given user.', 400))
+    response.headers['Content-Type'] = 'application/json'
+    return response
+
+
+# Disconnect based on provider and redirect to main page
+@app.route('/disconnect')
+def disconnect():
+  """
+  disconnect : Disconnect user based on provider
+  """ 
+  if 'provider' in login_session:
+      if login_session['provider'] == 'google':
+          gdisconnect()
+          del login_session['gplus_id']
+          del login_session['access_token']
+      # if login_session['provider'] == 'facebook':
+      #     fbdisconnect()
+      #     del login_session['facebook_id']
+      del login_session['username']
+      del login_session['email']
+      del login_session['picture']
+      # del login_session['user_id']
+      del login_session['provider']
+      flash("You have successfully been logged out.")
+      return redirect(url_for('showRestaurants'))
+  else:
+      flash("You were not logged in")
+      return redirect(url_for('showRestaurants'))
 
 
 # JSON APIs to view Restaurant Information
@@ -258,6 +322,46 @@ def deleteMenuItem(restaurant_id, menu_id):
         return redirect(url_for('showMenu', restaurant_id=restaurant_id))
     else:
         return render_template('deleteMenuItem.html', item=itemToDelete)
+
+# Create a new user
+def createUser(login_session):
+  """
+  createUser : Create a new user from session 
+  Args:
+    login_session (dict): session dictionary
+  """   
+  newUser = User(name=login_session['username'],
+                 email=login_session['email'],
+                 picture=login_session['picture'])
+  session.add(newUser)
+  session.commit()
+  user = session.query(User).filter_by(email=login_session['email']).one()
+  return user.id
+
+
+# Get a user from user_id
+def getUserInfo(user_id):
+  """
+  getUserInfo : Get user info for a user id
+  Args:
+    user_id (int): user id
+  """   
+  user = session.query(User).get(user_id)
+  return user
+
+
+# get a user from email address
+def getUserID(email):
+  """
+  getUserID : Get user info from an email address
+  Args:
+    email (string): user's email address
+  """   
+  try:
+      user = session.query(User).filter_by(email=email).one()
+      return user.id
+  except:
+      return None
 
 
 if __name__ == '__main__':
