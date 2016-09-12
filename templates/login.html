@@ -70,29 +70,26 @@ function signInCallback(authResult) {
 <!-- END GOOGLE SIGNIN -->
 
 <!-- FACEBOOK SIGNIN -->
-<!-- <script type="text/javascript">
-	window.fbAsyncInit = function() {
-	  FB.init({
-	    appId      : '776927249077674',
-	    cookie     : true,  // enable cookies to allow the server to access 
-	                        // the session
-	    xfbml      : true,  // parse social plugins on this page
-	    version    : 'v2.5' // use version 2.2
-	  });
-	  };
 
-	// Load the SDK asynchronously
-	// rest of page can load without this
-  (function(d, s, id) {
-    var js, fjs = d.getElementsByTagName(s)[0];
-    if (d.getElementById(id)) return;
-    js = d.createElement(s); js.id = id;
-    js.src = "//connect.facebook.net/en_US/sdk.js";
-    fjs.parentNode.insertBefore(js, fjs);
-  }(document, 'script', 'facebook-jssdk'));
-  
-  // Here we run a very simple test of the Graph API after login is
-  // successful.  See statusChangeCallback() for when this call is made.
+
+<script>
+  window.fbAsyncInit = function() {
+    FB.init({
+      appId      : '1664665813849751',
+      xfbml      : true,
+      version    : 'v2.6'
+    });
+  };
+
+  (function(d, s, id){
+     var js, fjs = d.getElementsByTagName(s)[0];
+     if (d.getElementById(id)) {return;}
+     js = d.createElement(s); js.id = id;
+     js.src = "//connect.facebook.net/en_US/sdk.js";
+     fjs.parentNode.insertBefore(js, fjs);
+   }(document, 'script', 'facebook-jssdk'));
+
+
   function sendTokenToServer() {
     var access_token = FB.getAuthResponse()['accessToken'];
     console.log(access_token)
@@ -113,24 +110,30 @@ function signInCallback(authResult) {
           window.location.href = "/restaurant";
          }, 4000);
           
-      } else {
+        } else {
         $('#result').html('Failed to make a server-side call. Check your configuration and console.');
          }
       }
       
-  });
+      });
     });
   }
 </script>
 
-<button>
-         
-
-          <fb:login-button scope="public_profile,email" onlogin="sendTokenToServer();">
-<a href='javascript:sendTokenToServer()'>Login with Facebook</a>
-
+<fb:login-button 
+  scope="public_profile,email"
+  onlogin="sendTokenToServer();">
+  <a href="javascript:sendTokenToServer()">Login with Facebook</a>
 </fb:login-button>
 
-</button> -->
+
+
+<script type="text/javascript">
+  function checkLoginState() {
+    FB.getLoginStatus(function(response) {
+      statusChangeCallback(response);
+    });
+  }
+</script>
 </body>
 </html>
